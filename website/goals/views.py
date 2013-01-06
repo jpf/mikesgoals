@@ -8,7 +8,11 @@ from django.views.decorators.csrf import csrf_exempt
 
 from goals.models import Goal, User
 
+import pprint
+
 import cjson
+
+import foursquare
 
 def r2r(template, request, data=None):
     if data is None:
@@ -24,6 +28,24 @@ def json_response(func):
 
 def goals(request):
     goals = []
+
+    # If the user signed in with Foursquare, here is how to get their user id.
+    # I'm pretty sure that the best way to do this would be to make a custom function to run
+    # in the pipeline that django-social-auth runs after a successful authentication.
+    # This custom function would get the take the Foursquare access token, use it to get the
+    # Foursquare user ID and then store both of those values in a Django user profile
+    #   http://django-social-auth.readthedocs.org/en/latest/pipeline.html
+    #   http://stackoverflow.com/questions/6085025/django-user-profile
+    try:
+        access_token = request.user.social_auth.get().extra_data['access_token']
+        client = foursquare.Foursquare(access_token=access_token)
+        foursquare_user_id = client.users()['user']['id']
+        print "Debug:"
+        pprint.pprint(request.user.username)
+        pprint.pprint(foursquare_user_id)
+    except:
+        pass
+
     if request.user.is_authenticated():
         goals = request.user.goal_set.order_by('frequency')
     return r2r("index.jinja", request, {"goals": goals})
